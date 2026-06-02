@@ -9,30 +9,66 @@
         body { background: #111; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; }
         #game-container { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #1a1a1a; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
         canvas { display: block; width: 100%; height: 100%; background: #222; }
-        #debug-ui { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85); padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 11px; color: #00ffcc; pointer-events: none; border: 1px solid #333; line-height: 1.4; z-index: 10; }
+        
+        #hud { position: absolute; top: 12px; left: 12px; right: 12px; display: none; justify-content: space-between; font-family: monospace; font-size: 13px; font-weight: bold; background: rgba(15,15,15,0.85); padding: 10px 14px; border-radius: 6px; border: 1px solid #333; z-index: 10; pointer-events: none; }
+        .hud-block { display: flex; flex-direction: column; }
+        .hud-val { font-size: 16px; color: #ffcc00; transition: transform 0.1s ease; }
+
         #touch-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; z-index: 5; }
         .touch-zone { height: 100%; cursor: pointer; background: rgba(255, 255, 255, 0); }
+        
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 10, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; z-index: 20; }
+        h1 { font-size: 28px; font-weight: 900; color: #ffcc00; letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+        p { font-size: 13px; color: #a1a1aa; margin-bottom: 20px; line-height: 1.4; }
+        
+        .menu-btn { background: #222; color: #fff; border: 1px solid #444; padding: 14px 18px; font-size: 14px; font-weight: bold; width: 100%; max-width: 320px; border-radius: 6px; margin: 6px 0; cursor: pointer; text-align: left; transition: 0.2s; }
+        .menu-btn:active { transform: scale(0.98); }
+        .menu-btn .btn-title { display: block; font-size: 16px; margin-bottom: 2px; }
+        .menu-btn .btn-desc { font-size: 11px; color: #888; font-weight: normal; line-height: 1.2; display: block; }
+        .menu-btn.select-cop { border-left: 5px solid #3b82f6; }
+        .menu-btn.select-driver { border-left: 5px solid #eab308; }
+        .menu-btn.select-evader { border-left: 5px solid #22c55e; }
+
+        .action-hint { font-size: 12px; color: #e4e4e7; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        .shake-active { animation: containerRattle 0.35s cubic-bezier(.36,.07,.19,.97) both; transform: translate3d(0, 0, 0); }
+        @keyframes containerRattle {
+            10%, 90% { transform: translate3d(-4px, 2px, 0) rotate(-1deg); }
+            20%, 80% { transform: translate3d(6px, -3px, 0) rotate(1.5deg); }
+            30%, 50%, 70% { transform: translate3d(-8px, 4px, 0) rotate(-2deg); }
+            40%, 60% { transform: translate3d(8px, -4px, 0) rotate(2deg); }
+        }
     </style>
 </head>
 <body>
-
 <div id="game-container">
-    <div id="debug-ui">
-        FPS: <span id="debug-fps">0</span><br>
-        ACTIVE OBSTACLES: <span id="debug-obs-count">0</span><br>
-        GAME SPEED: <span id="debug-speed">1.00</span><br>
-        VP CONFIG: <span id="debug-res">0x0</span>
+    <div id="hud">
+        <div class="hud-block"><span>LAUNDERED</span><span id="hud-cash" class="hud-val">$0</span></div>
+        <div class="hud-block" style="align-items: center;"><span>FACTION</span><span id="hud-faction" style="font-size:12px; margin-top:3px;">NONE</span></div>
+        <div class="hud-block" style="align-items: flex-end;"><span>RANK LVL</span><span id="hud-lvl" class="hud-val">1</span></div>
+    </div>
+
+    <div id="faction-screen" class="overlay">
+        <h1>METRO MAYHEM</h1>
+        <p>Select your operational career path. Your choice directly influences cash multipliers and career progression speeds.</p>
+        <button class="menu-btn select-cop" id="btn-cop"><span class="btn-title" style="color:#3b82f6;">👮 NYPD Transit Cop</span><span class="btn-desc">Perk: Double XP progression tracking curves.</span></button>
+        <button class="menu-btn select-driver" id="btn-driver"><span class="btn-title" style="color:#eab308;">🚌 MTA Bus Driver</span><span class="btn-desc">Perk: 1.5x Cash multipliers. Balanced stability.</span></button>
+        <button class="menu-btn select-evader" id="btn-evader"><span class="btn-title" style="color:#22c55e;">🏃 Fare Evader</span><span class="btn-desc">Perk: 2.5x High-Risk Cash drops. Slow XP growth.</span></button>
+    </div>
+
+    <div id="gameover-screen" class="overlay" style="display: none;">
+        <h1 style="color: #ef4444;">RUN TERMINATED</h1>
+        <p id="gameover-stats">Summary of earnings goes here...</p>
+        <span class="action-hint">Tap Screen to Return to Faction Select</span>
     </div>
 
     <div id="touch-controls">
         <div class="touch-zone" id="left-zone"></div>
         <div class="touch-zone" id="right-zone"></div>
     </div>
-
     <canvas id="gameCanvas"></canvas>
 </div>
-
 <script type="module" src="./src/game.js"></script>
-
 </body>
 </html>
