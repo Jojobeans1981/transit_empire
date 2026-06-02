@@ -1,79 +1,54 @@
 export const State = {
-    faction: null, // "cop", "driver", or "evader"
     cash: 0,
-    xp: 0,
     level: 1,
+    xp: 0,
+    xpNeeded: 100,
+    faction: 'driver',
+    
+    // Global Power-up states
+    activeShield: false,
+    nitroTimer: 0,
 
     factions: {
-        cop: {
-            name: "NYPD Transit Cop",
-            color: "#1e40af",
-            hudColor: "#3b82f6",
-            cashMult: 1.0,
-            xpMult: 2.0, // Perk: Fast Leveling
-            description: "Enforce fare compliance. Earns double career XP."
-        },
-        driver: {
-            name: "MTA Bus Driver",
-            color: "#eab308",
-            hudColor: "#eab308",
-            cashMult: 1.5, // Perk: High stable pay
-            xpMult: 1.0,
-            description: "Maintain schedule accuracy. Stronger, stable union cash payouts."
-        },
-        evader: {
-            name: "Fare Evader",
-            color: "#22c55e",
-            hudColor: "#22c55e",
-            cashMult: 2.5, // Perk: High Risk, High Reward
-            xpMult: 0.5,
-            description: "Dodge transit authority. Maximum cash returns, slow progression."
+        cop: { name: "NYPD Transit Cop", cashMult: 1.0, xpMult: 2.0, color: "#3b82f6" },
+        driver: { name: "MTA Bus Driver", cashMult: 1.5, xpMult: 1.0, color: "#eab308" },
+        evader: { name: "Fare Evader", cashMult: 2.5, xpMult: 0.5, color: "#22c55e" }
+    },
+
+    setFaction(factionKey) {
+        if (this.factions[factionKey]) {
+            this.faction = factionKey;
         }
     },
 
-    setFaction(type) {
-        this.faction = type;
-        this.cash = 0;
-        this.xp = 0;
-        this.level = 1;
-        this.updateHUD();
-    },
-
     awardScore(baseCash, baseXp) {
-        if (!this.faction) return;
-        const config = this.factions[this.faction];
+        const modifier = this.factions[this.faction];
         
-        this.cash += baseCash * config.cashMult;
-        this.xp += baseXp * config.xpMult;
+        // If burning through nitro, triple cash intake
+        const nitroBonus = this.nitroTimer > 0 ? 3.0 : 1.0;
 
-        // Dynamic XP Level-Up Calculation Equation
-        const nextLevelXp = this.level * 100;
-        if (this.xp >= nextLevelXp) {
-            this.xp -= nextLevelXp;
-            this.level += 1;
-            this.triggerLevelUpAnimation();
+        this.cash += Math.floor(baseCash * modifier.cashMult * nitroBonus);
+        this.xp += Math.floor(baseXp * modifier.xpMult);
+
+        if (this.xp >= this.xpNeeded) {
+            this.level++;
+            this.xp -= this.xpNeeded;
+            this.xpNeeded = Math.floor(this.xpNeeded * 1.5);
         }
 
         this.updateHUD();
     },
 
     updateHUD() {
-        if (!this.faction) return;
-        const config = this.factions[this.faction];
-        
-        document.getElementById('hud-faction').innerText = config.name.toUpperCase();
-        document.getElementById('hud-faction').style.color = config.hudColor;
-        document.getElementById('hud-cash').innerText = `$${Math.floor(this.cash)}`;
-        document.getElementById('hud-lvl').innerText = this.level;
-    },
+        const elCash = document.getElementById('hud-cash');
+        const elFaction = document.getElementById('hud-faction');
+        const elLvl = document.getElementById('hud-lvl');
 
-    triggerLevelUpAnimation() {
-        const hudLvl = document.getElementById('hud-lvl');
-        hudLvl.style.transform = 'scale(1.5)';
-        hudLvl.style.color = '#00ffcc';
-        setTimeout(() => {
-            hudLvl.style.transform = 'scale(1)';
-            hudLvl.style.color = '#ffcc00';
-        }, 300);
+        if (elCash) elCash.innerText = `$${Math.floor(this.cash)}`;
+        if (elFaction) {
+            elFaction.innerText = this.factions[this.faction].name.toUpperCase();
+            elFaction.style.color = this.factions[this.faction].color;
+        }
+        if (elLvl) elLvl.innerText = this.level;
     }
 };

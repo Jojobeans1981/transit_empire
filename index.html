@@ -3,45 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Metro Mayhem: NYC Transit Chronicles</title>
+    <title>Transit Empire: Overdrive Chronicles</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-        body { background: #111; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; }
-        #game-container { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #1a1a1a; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
-        canvas { display: block; width: 100%; height: 100%; background: #222; }
+        body { background: #0f172a; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; }
+        #game-container { position: relative; width: 100%; max-width: 430px; height: 100%; max-height: 820px; background: #0f172a; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.85); border: 4px solid #334155; }
+        canvas { display: block; width: 100%; height: 100%; }
         
-        #hud { position: absolute; top: 12px; left: 12px; right: 12px; display: none; justify-content: space-between; font-family: monospace; font-size: 13px; font-weight: bold; background: rgba(15,15,15,0.85); padding: 10px 14px; border-radius: 6px; border: 1px solid #333; z-index: 10; pointer-events: none; }
+        #hud { position: absolute; top: 12px; left: 12px; right: 12px; display: none; justify-content: space-between; font-family: monospace; font-size: 13px; font-weight: bold; background: rgba(15,23,42,0.92); padding: 10px 14px; border-radius: 6px; border: 2px solid #475569; z-index: 10; pointer-events: none; }
         .hud-block { display: flex; flex-direction: column; }
-        .hud-val { font-size: 16px; color: #ffcc00; transition: transform 0.1s ease; }
+        .hud-val { font-size: 18px; color: #eab308; }
 
         #touch-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; z-index: 5; }
-        .touch-zone { height: 100%; cursor: pointer; background: rgba(255, 255, 255, 0); }
+        .touch-zone { height: 100%; cursor: pointer; background: rgba(0,0,0,0); }
         
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 10, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; z-index: 20; }
-        h1 { font-size: 28px; font-weight: 900; color: #ffcc00; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
-        p { font-size: 13px; color: #a1a1aa; margin-bottom: 16px; line-height: 1.4; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.96); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; z-index: 20; }
+        h1 { font-size: 32px; font-weight: 900; color: #f43f5e; text-shadow: 0 0 15px rgba(244,63,94,0.5); letter-spacing: 1px; margin-bottom: 2px; }
+        p { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
         
-        /* Persistent Profile Dashboard Box */
-        #career-profile-card { background: rgba(255,255,255,0.04); border: 1px dashed #444; width: 100%; max-width: 320px; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; text-align: left; color: #e4e4e7; }
-        .stat-highlight { color: #00ffcc; font-weight: bold; }
+        #career-profile-card { background: rgba(30,41,59,0.7); border: 2px solid #475569; width: 100%; max-width: 340px; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; color: #f8fafc; }
+        .stat-highlight { color: #22c55e; font-weight: bold; }
 
-        .menu-btn { background: #222; color: #fff; border: 1px solid #444; padding: 14px 18px; font-size: 14px; font-weight: bold; width: 100%; max-width: 320px; border-radius: 6px; margin: 6px 0; cursor: pointer; text-align: left; transition: 0.2s; }
+        /* Garage Store Interface Modals Layout */
+        .garage-section { width: 100%; max-width: 340px; background: rgba(51,65,85,0.4); border: 1px solid #475569; padding: 10px; border-radius: 8px; margin-bottom: 14px; text-align: left; }
+        .garage-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #38bdf8; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+        .garage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .shop-btn { background: #1e293b; color: #fff; border: 1px solid #64748b; padding: 8px; font-size: 11px; border-radius: 6px; cursor: pointer; text-align: center; font-weight: bold; transition: 0.1s; }
+        .shop-btn:active { transform: scale(0.96); background: #334155; }
+
+        .menu-btn { background: #1e293b; color: #fff; border: 1px solid #475569; padding: 12px 14px; font-size: 13px; font-weight: bold; width: 100%; max-width: 340px; border-radius: 8px; margin: 4px 0; cursor: pointer; text-align: left; transition: 0.1s; }
         .menu-btn:active { transform: scale(0.98); }
-        .menu-btn .btn-title { display: block; font-size: 16px; margin-bottom: 2px; }
-        .menu-btn .btn-desc { font-size: 11px; color: #888; font-weight: normal; line-height: 1.2; display: block; }
+        .menu-btn .btn-title { display: block; font-size: 15px; margin-bottom: 1px; }
+        .menu-btn .btn-desc { font-size: 11px; color: #94a3b8; font-weight: normal; display: block; }
         .menu-btn.select-cop { border-left: 5px solid #3b82f6; }
         .menu-btn.select-driver { border-left: 5px solid #eab308; }
         .menu-btn.select-evader { border-left: 5px solid #22c55e; }
 
-        .action-hint { font-size: 12px; color: #e4e4e7; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; animation: pulse 1.5s infinite; }
+        .action-hint { font-size: 12px; color: #f43f5e; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; animation: pulse 1.2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-        .shake-active { animation: containerRattle 0.35s cubic-bezier(.36,.07,.19,.97) both; transform: translate3d(0, 0, 0); }
+        .shake-active { animation: containerRattle 0.3s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes containerRattle {
-            10%, 90% { transform: translate3d(-4px, 2px, 0) rotate(-1deg); }
-            20%, 80% { transform: translate3d(6px, -3px, 0) rotate(1.5deg); }
-            30%, 50%, 70% { transform: translate3d(-8px, 4px, 0) rotate(-2deg); }
-            40%, 60% { transform: translate3d(8px, -4px, 0) rotate(2deg); }
+            10%, 90% { transform: translate3d(-3px, 1px, 0); }
+            20%, 80% { transform: translate3d(4px, -2px, 0); }
+            30%, 50%, 70% { transform: translate3d(-5px, 2px, 0); }
+            40%, 60% { transform: translate3d(5px, -2px, 0); }
         }
     </style>
 </head>
@@ -49,28 +55,36 @@
 <div id="game-container">
     <div id="hud">
         <div class="hud-block"><span>LAUNDERED</span><span id="hud-cash" class="hud-val">$0</span></div>
-        <div class="hud-block" style="align-items: center;"><span>FACTION</span><span id="hud-faction" style="font-size:12px; margin-top:3px;">NONE</span></div>
-        <div class="hud-block" style="align-items: flex-end;"><span>RANK LVL</span><span id="hud-lvl" class="hud-val">1</span></div>
+        <div class="hud-block" style="align-items: center;"><span>OPERATIONAL PATH</span><span id="hud-faction" style="font-size:11px; margin-top:4px; font-weight:900;">NONE</span></div>
+        <div class="hud-block" style="align-items: flex-end;"><span>RANK</span><span id="hud-lvl" class="hud-val">1</span></div>
     </div>
 
     <div id="faction-screen" class="overlay">
-        <h1>METRO MAYHEM</h1>
-        <p>Select your operational career path.</p>
+        <h1>TRANSIT EMPIRE</h1>
+        <p>Smash the black market transportation grids.</p>
         
         <div id="career-profile-card">
-            <div>TOTAL LAUNDERED: <span id="career-cash" class="stat-highlight">$0</span></div>
-            <div>PEAK RANK: <span id="career-lvl" class="stat-highlight" style="color:#ffcc00;">1</span></div>
+            <div>BANK BALANCE: <span id="career-cash" class="stat-highlight">$0</span></div>
+            <div>PEAK RANK: <span id="career-lvl" class="stat-highlight" style="color:#f43f5e;">1</span></div>
         </div>
 
-        <button class="menu-btn select-cop" id="btn-cop"><span class="btn-title" style="color:#3b82f6;">👮 NYPD Transit Cop</span><span class="btn-desc">Perk: Double XP progression tracking curves.</span></button>
-        <button class="menu-btn select-driver" id="btn-driver"><span class="btn-title" style="color:#eab308;">🚌 MTA Bus Driver</span><span class="btn-desc">Perk: 1.5x Cash multipliers. Balanced stability.</span></button>
-        <button class="menu-btn select-evader" id="btn-evader"><span class="btn-title" style="color:#22c55e;">🏃 Fare Evader</span><span class="btn-desc">Perk: 2.5x High-Risk Cash drops. Slow XP growth.</span></button>
+        <div class="garage-section">
+            <span class="garage-title">🔧 BLACK MARKET BLACKSMITH GARAGE</span>
+            <div class="garage-grid">
+                <button class="shop-btn" id="buy-engine">⚙️ Boost Engine<br><small>Cost: $150</small></button>
+                <button class="shop-btn" id="buy-shield">🛡️ Extra Shield<br><small>Cost: $250</small></button>
+            </div>
+        </div>
+
+        <button class="menu-btn select-cop" id="btn-cop"><span class="btn-title" style="color:#3b82f6;">👮 Operational Path: Cop</span><span class="btn-desc">Double experience multiplier scaling spikes.</span></button>
+        <button class="menu-btn select-driver" id="btn-driver"><span class="btn-title" style="color:#eab308;">🚌 Operational Path: Driver</span><span class="btn-desc">Standard balanced deployment fleet. 1.5x payouts.</span></button>
+        <button class="menu-btn select-evader" id="btn-evader"><span class="btn-title" style="color:#22c55e;">🏃 Operational Path: Evader</span><span class="btn-desc">Extreme vulnerability curves. 2.5x high risk drops.</span></button>
     </div>
 
     <div id="gameover-screen" class="overlay" style="display: none;">
         <h1 style="color: #ef4444;">RUN TERMINATED</h1>
-        <p id="gameover-stats">Summary of earnings goes here...</p>
-        <span class="action-hint">Tap Screen to Return to Faction Select</span>
+        <p id="gameover-stats">Processing black market logs...</p>
+        <span class="action-hint">Tap Anywhere to Enter Faction Garage Deck</span>
     </div>
 
     <div id="touch-controls">
