@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Metro Mayhem: NYC Transit Chronicles</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background: #111;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            max-height: 800px;
+            background: #1a1a1a;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #222;
+        }
+        #debug-ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.85);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #00ffcc;
+            pointer-events: none;
+            border: 1px solid #333;
+            line-height: 1.4;
+            z-index: 10;
+        }
+        /* Mobile Touch Overlay Zones */
+        #touch-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            z-index: 5;
+        }
+        .touch-zone {
+            height: 100%;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0); /* Invisible but clickable */
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="debug-ui">
+        FPS: <span id="debug-fps">0</span><br>
+        CURRENT LANE: <span id="debug-lane-idx">1</span><br>
+        TARGET X: <span id="debug-target-x">0px</span>
+    </div>
+
+    <div id="touch-controls">
+        <div class="touch-zone" id="left-zone"></div>
+        <div class="touch-zone" id="right-zone"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Debug Nodes
+    const fpsDisplay = document.getElementById('debug-fps');
+    const laneIdxDisplay = document.getElementById('debug-lane-idx');
+    const targetXDisplay = document.getElementById('debug-target-x');
+
+    // System Engine Parameters
+    const engine = {
+        lastTime: performance.now(),
+        fpsFilter: 50,
+        fps: 0,
+        laneCount: 3,
+        laneWidth: 0,
+        roadScrollY: 0,
+        scrollSpeed: 5
+    };
+
+    // Unified Player State Vector Matrix
+    const player = {
+        currentLane: 1, // Start in middle lane (0 = Left, 1 = Center, 2 = Right)
+        visualX: 0,     // Interpolated X position for smooth horizontal transitions
+        targetX: 0,     // Destination X position based on current lane
+        y: 0,           // Vertical offset calculated on viewport configuration
+        width: 44,
+        height: 75,
+        speedX: 0.25    // Lerp interpolation factor for crisp lateral swerving
+    };
+
+    function resizeViewport() {
+        const container = document.getElementById('game-container');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = container.getBoundingClientRect();
+        
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        engine.laneWidth = rect.width / engine.laneCount;
+        
+        // Pin player coordinates near bottom of viewport bounds
+        player.y = rect.height - 140;
+        recalculatePlayerX(true); // Snap instantly on resize
+    }
+
+    function recalculatePlayerX(snapInstantly = false) {
+        // Calculate centered alignment position within target lane track
+        player.targetX = (player.currentLane * engine.laneWidth) + (engine.laneWidth - player.width) / 2;
+        if (snapInstantly) {
+            player.visualX = player.targetX;
+        }
+    }
+
+    function changeLane(direction) {
+        const nextLane = player.currentLane + direction;
+        if (nextLane >= 0 && nextLane < engine.laneCount) {
+            player.currentLane = nextLane;
+            recalculatePlayerX();
+            laneIdxDisplay.innerText = player.currentLane;
+        }
+    }
+
+    // --- HARDWARE INTERFACES ---
+    // Desktop Key Listeners
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') changeLane(-1);
+        if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') changeLane(1);
+    });
+
+    // Mobile/Pointer Touch Tap Zones
+    document.getElementById('left-zone').addEventListener('pointerdown', (e) => { e.preventDefault(); changeLane(-1); });
+    document.getElementById('right-zone').addEventListener('pointerdown', (e) => { e.preventDefault(); changeLane(1); });
+
+    window.addEventListener('resize', resizeViewport);
+    resizeViewport();
+
+    // --- MAIN ENGINE FRAME LOOP ---
+    function engineLoop(currentTime) {
+        const dt = (currentTime - engine.lastTime) / 1000;
+        engine.lastTime = currentTime;
+
+        const currentFps = 1 / dt;
+        if (!isNaN(currentFps) && isFinite(currentFps)) {
+            engine.fps += (currentFps - engine.fps) / engine.fpsFilter;
+            fpsDisplay.innerText = Math.round(engine.fps);
+        }
+
+        // --- GAME STATE UPDATE CALCULATIONS ---
+        engine.roadScrollY += engine.scrollSpeed;
+        if (engine.roadScrollY >= 40) engine.roadScrollY = 0;
+
+        // Smooth Linear Interpolation (LERP) for vehicle swerving motion mechanics
+        player.visualX += (player.targetX - player.visualX) * (player.speedX * (dt * 60));
+        targetXDisplay.innerText = `${Math.round(player.visualX)}px`;
+
+        // --- RENDERING ROUTINES ---
+        const w = canvas.width / (window.devicePixelRatio || 1);
+        const h = canvas.height / (window.devicePixelRatio || 1);
+        ctx.clearRect(0, 0, w, h);
+
+        // Render Asphalt Track
+        ctx.fillStyle = '#262626';
+        ctx.fillRect(0, 0, w, h);
+
+        // Render Road Divider Lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([22, 22]);
+        for (let i = 1; i < engine.laneCount; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * engine.laneWidth, -40 + engine.roadScrollY);
+            ctx.lineTo(i * engine.laneWidth, h);
+            ctx.stroke();
+        }
+
+        // Render Player Chassis (Stylized Retro Sprite Geometry Box)
+        ctx.fillStyle = '#0284c7'; // Classic NYC Cab Blue variant
+        ctx.fillRect(player.visualX, player.y, player.width, player.height);
+
+        // Windshield Accent
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(player.visualX + 5, player.y + 12, player.width - 10, 14);
+
+        // Rear Tail Light Brake Flares
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(player.visualX + 4, player.y + player.height - 6, 8, 6);
+        ctx.fillRect(player.visualX + player.width - 12, player.y + player.height - 6, 8, 6);
+
+        requestAnimationFrame(engineLoop);
+    }
+    requestAnimationFrame(engineLoop);
+</script>
+
+</body>
+</html>
