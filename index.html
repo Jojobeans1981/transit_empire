@@ -18,9 +18,13 @@
         .touch-zone { height: 100%; cursor: pointer; background: rgba(255, 255, 255, 0); }
         
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 10, 10, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; z-index: 20; }
-        h1 { font-size: 28px; font-weight: 900; color: #ffcc00; letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
-        p { font-size: 13px; color: #a1a1aa; margin-bottom: 20px; line-height: 1.4; }
+        h1 { font-size: 28px; font-weight: 900; color: #ffcc00; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
+        p { font-size: 13px; color: #a1a1aa; margin-bottom: 16px; line-height: 1.4; }
         
+        /* Persistent Profile Dashboard Box */
+        #career-profile-card { background: rgba(255,255,255,0.04); border: 1px dashed #444; width: 100%; max-width: 320px; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; text-align: left; color: #e4e4e7; }
+        .stat-highlight { color: #00ffcc; font-weight: bold; }
+
         .menu-btn { background: #222; color: #fff; border: 1px solid #444; padding: 14px 18px; font-size: 14px; font-weight: bold; width: 100%; max-width: 320px; border-radius: 6px; margin: 6px 0; cursor: pointer; text-align: left; transition: 0.2s; }
         .menu-btn:active { transform: scale(0.98); }
         .menu-btn .btn-title { display: block; font-size: 16px; margin-bottom: 2px; }
@@ -51,7 +55,13 @@
 
     <div id="faction-screen" class="overlay">
         <h1>METRO MAYHEM</h1>
-        <p>Select your operational career path. Your choice directly influences cash multipliers and career progression speeds.</p>
+        <p>Select your operational career path.</p>
+        
+        <div id="career-profile-card">
+            <div>TOTAL LAUNDERED: <span id="career-cash" class="stat-highlight">$0</span></div>
+            <div>PEAK RANK: <span id="career-lvl" class="stat-highlight" style="color:#ffcc00;">1</span></div>
+        </div>
+
         <button class="menu-btn select-cop" id="btn-cop"><span class="btn-title" style="color:#3b82f6;">👮 NYPD Transit Cop</span><span class="btn-desc">Perk: Double XP progression tracking curves.</span></button>
         <button class="menu-btn select-driver" id="btn-driver"><span class="btn-title" style="color:#eab308;">🚌 MTA Bus Driver</span><span class="btn-desc">Perk: 1.5x Cash multipliers. Balanced stability.</span></button>
         <button class="menu-btn select-evader" id="btn-evader"><span class="btn-title" style="color:#22c55e;">🏃 Fare Evader</span><span class="btn-desc">Perk: 2.5x High-Risk Cash drops. Slow XP growth.</span></button>

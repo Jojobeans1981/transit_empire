@@ -3,6 +3,9 @@ import { Input } from './input.js';
 import { Player } from './player.js';
 import { Obstacles } from './obstacles.js';
 import { State } from './state.js';
+import { AudioFX } from './audio.js';
+import { Storage } from './storage.js';
+import { Juice } from './juice.js'; // Import custom text engine structures
 
 const Game = {
     lastTime: performance.now(),
@@ -11,20 +14,21 @@ const Game = {
     roadScrollY: 0,
     speedMultiplier: 1.0,
     isGameOver: false,
-    isMenuMode: true, // New toggle to halt processing on faction selection windows
+    isMenuMode: true,
 
     init() {
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         Viewport.init(canvas, ctx);
         this.ctx = ctx;
+        this.containerEl = document.getElementById('game-container');
 
-        // Map Selection Menu Actions Buttons Click Triggers
+        Storage.updateMenuUI();
+
         document.getElementById('btn-cop').addEventListener('click', () => this.selectFaction('cop'));
         document.getElementById('btn-driver').addEventListener('click', () => this.selectFaction('driver'));
         document.getElementById('btn-evader').addEventListener('click', () => this.selectFaction('evader'));
 
-        // Handle Restart Triggers
         document.getElementById('gameover-screen').addEventListener('click', () => {
             if (this.isGameOver) this.showMenu();
         });
@@ -37,6 +41,7 @@ const Game = {
     },
 
     selectFaction(factionKey) {
+        AudioFX.init();
         State.setFaction(factionKey);
         this.isMenuMode = false;
         document.getElementById('faction-screen').style.display = 'none';
@@ -47,17 +52,21 @@ const Game = {
     showMenu() {
         this.isGameOver = false;
         this.isMenuMode = true;
+        this.containerEl.classList.remove('shake-active');
         document.getElementById('gameover-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'none';
         document.getElementById('faction-screen').style.display = 'flex';
+        Storage.updateMenuUI();
     },
 
     resetGame() {
         this.isGameOver = false;
         this.speedMultiplier = 1.0;
         this.roadScrollY = 0;
+        this.containerEl.classList.remove('shake-active');
         Player.init();
         Obstacles.list = [];
+        Juice.popups = []; // Clear old running text nodes out
         Obstacles.lastSpawnTime = performance.now();
     },
 
@@ -70,29 +79,50 @@ const Game = {
         for (let i = 0; i < Obstacles.list.length; i++) {
             const obs = Obstacles.list[i];
 
-            // If car crosses player's visual tracking matrix box layout boundaries
             if (pX < obs.x + obs.width && pX + pW > obs.x && pY < obs.y + obs.height && pY + pH > obs.y) {
                 this.triggerGameOver();
                 break;
             }
 
-            // SCORE PASS VERIFICATION CHECK: If obstacle has cleared the player car safely
             if (!obs.passed && obs.y > pY + pH) {
                 obs.passed = true;
-                // Base rewards: $10 and 15 XP points per dodge before modifiers are applied
-                State.awardScore(10, 15);
+                
+                const baseCash = 10;
+                const baseXp = 15;
+                const factionConfig = State.factions[State.faction];
+
+                // Calculate modified values to match the floating popup display
+                const cashEarned = Math.floor(baseCash * factionConfig.cashMult);
+                const xpEarned = Math.floor(baseXp * factionConfig.xpMult);
+
+                State.awardScore(baseCash, baseXp);
+
+                // Spawn floating notifications over the player car's roof
+                Juice.spawn(pX + pW / 2, pY, `+$${cashEarned}`, '#22c55e');
+                setTimeout(() => {
+                    if (!this.isGameOver && !this.isMenuMode) {
+                        Juice.spawn(pX + pW / 2, pY - 15, `+${xpEarned} XP`, '#ffcc00');
+                    }
+                }, 180);
             }
         }
     },
 
     triggerGameOver() {
         this.isGameOver = true;
+        AudioFX.playCrash();
+        this.containerEl.classList.add('shake-active');
+        Storage.saveProfile(State.cash, State.level);
+
         document.getElementById('gameover-stats').innerHTML = `
             Faction Profile Run: <strong>${State.factions[State.faction].name}</strong><br>
             Bank Payout Generated: <strong style="color:#ffcc00;">$${Math.floor(State.cash)}</strong><br>
             Final Experience Level Reached: <strong style="color:#00ffcc;">Rank ${State.level}</strong>
         `;
-        document.getElementById('gameover-screen').style.display = 'flex';
+        
+        setTimeout(() => {
+            document.getElementById('gameover-screen').style.display = 'flex';
+        }, 300);
     },
 
     loop(currentTime) {
@@ -100,22 +130,16 @@ const Game = {
         this.lastTime = currentTime;
 
         if (!this.isGameOver && !this.isMenuMode) {
-            const currentFps = 1 / dt;
-            if (!isNaN(currentFps) && isFinite(currentFps)) {
-                this.fps += (currentFps - this.fps) / this.fpsFilter;
-            }
-
             this.speedMultiplier += 0.0003 * (dt * 60);
-
             this.roadScrollY += Obstacles.baseScrollSpeed * this.speedMultiplier;
             if (this.roadScrollY >= 40) this.roadScrollY = 0;
 
             Player.update(dt);
             Obstacles.update(dt, this.speedMultiplier, currentTime);
             this.checkCollisions();
+            Juice.update(dt); // Run particle position drift transitions
         }
 
-        // DRAW SYSTEMS ROUTINES
         this.ctx.clearRect(0, 0, Viewport.width, Viewport.height);
         this.ctx.fillStyle = '#262626';
         this.ctx.fillRect(0, 0, Viewport.width, Viewport.height);
@@ -133,6 +157,7 @@ const Game = {
         if (!this.isMenuMode) {
             Obstacles.render(this.ctx);
             Player.render(this.ctx);
+            Juice.render(this.ctx); // Layer texts neatly on top of the vehicles
         }
 
         requestAnimationFrame((time) => this.loop(time));
